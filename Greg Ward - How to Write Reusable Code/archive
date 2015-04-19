@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# make a zip file of this presentation (including deck.js!)
+
+if [ $# -ne 1 ]; then
+    echo "usage: $0 outfile" >&2
+    exit 2
+fi
+
+outfile=$1
+#tmpfile=$(mktemp tmp.XXXXXXXXXXX.zip)
+tmpfile="$outfile.tmp"
+
+basename=$(basename $PWD)
+cd ..
+set -ex
+zip -q $tmpfile $(find $basename -follow \( -name .hg -o -name .git \) -prune -o -type f -print)
+rm -f $outfile
+mv $tmpfile $outfile

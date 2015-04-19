@@ -1,0 +1,36 @@
+>>> [2**x for x in range(10)]
+>>> 2**1000
+
+>>> import bits
+>>> from ctypes import *
+>>> c = bits.cpuid(0,0)
+>>> c
+>>> buf = (c_uint32*3)(c.ebx, c.edx, c.ecx)
+>>> (c_char*12).from_buffer(buf).value
+
+----------
+
+>>> import acpi
+>>> print acpi.dump("_HID")
+
+----------
+
+>>> import efi
+>>> out = efi.system_table.ConOut.contents
+>>> out.OutputString(out, "Hello world!\r\n")
+
+----------
+
+Finally, show of hands, who remembers the fun part about DOS programming, that
+you could directly access hardware, such as getting a pointer to video memory
+and just writing pixels?  Well, let's do that:
+>>> fb = (c_uint32 * 800 * 600).from_address(bits.present.gop.Mode.contents.FrameBufferBase)
+>>> for y in range(400):
+>>>     for x in range(400):
+>>>         zx,zy = cx,cy = -2+2.5*x/400.0, -1.25+2.5*y/400.0
+>>>         for i in range(25):
+>>>             zx,zy = zx*zx-zy*zy+cx, 2*zx*zy+cy
+>>>             if zx*zx+zy*zy > 4: break
+>>>         fb[y][x+400] = (250-10*i)*0x10101
+
+Fractals via EFI graphics output protocol, in eight lines of Python.

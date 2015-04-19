@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=1024, user-scalable=no">
+
+  <title>How To Write Reusable Code</title>
+
+  <link rel="stylesheet" href="deck.js/core/deck.core.css">
+  <link rel="stylesheet" href="deck.js/extensions/goto/deck.goto.css">
+  <link rel="stylesheet" href="deck.js/extensions/menu/deck.menu.css">
+  <link rel="stylesheet" href="deck.js/extensions/status/deck.status.css">
+  <link rel="stylesheet" href="deck.js/extensions/hash/deck.hash.css">
+  <link rel="stylesheet" href="deck.js/extensions/scale/deck.scale.css">
+  <link rel="stylesheet" href="deck.js/themes/style/web-2.0.css">
+
+  <!-- Transition theme. More available in /themes/transition/ or create your own. -->
+<!--
+  <link rel="stylesheet" href="deck.js/themes/transition/horizontal-slide.css">
+-->
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Required Modernizr file -->
+  <script src="deck.js/modernizr.custom.js"></script>
+
+</head>
+<body class="deck-container">
+
+<section class="slide">
+  <h1>How To Write<br>Reusable Code</h1>
+  <p style="margin-top: 2ex; text-align: right;">
+    Greg Ward &lt;greg&#x0040;gerg&#x002E;ca&gt;<br>
+    &#x0040;gergdotca<br>
+    PyCon 2015<br>
+    Montreal, QC • Apr 11, 2015
+  </p>
+  <div class="footer"><a href="http://gerg.ca/talks/reusable-code/">http://gerg.ca/talks/reusable-code/</a></div>
+</section>
+
+<section class="slide">
+  <h2>Who remembers the 90s?</h2>
+  <div style="text-align: center">
+    <img class="grid" src="macgyver.jpeg">
+    <img class="grid" src="nirvana.jpeg">
+  </div>
+  <div style="text-align: center">
+    <img class="grid" src="bush-gorbachev.jpeg">
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Oops, sorry, wrong 90s</h2>
+  <div style="text-align: center">
+    <img class="grid" src="drdobbs-jun98.jpeg">
+    <img class="grid" src="fortran95-oop.jpeg">
+    <img class="grid" src="design-patterns.png">
+    <img class="grid" src="vb6-oop.jpeg">
+  </div>
+</section>
+
+
+<section class="slide">
+  <h2>Honestly, you didn't miss much</h2>
+  <p style="margin: 2em; font-size: 150%;">mostly <span class="big">clueless pontificators</span> claiming
+  that <span class="big">object-oriented programming</span> would
+  magically usher in an era of <span class="big">reusable component
+  software</span></p>
+</section>
+
+<section class="slide">
+  <h2>...15 years pass...</h2>
+  <p style="font-size: 200%; text-align: center;">
+    Abstract<br>
+    Singleton<br>
+    Proxy<br>
+    Factory<br>
+    Bean
+  </p>
+  <p>"Convenient proxy factory bean superclass for proxy factory beans
+  that create only singletons." <sup>*</sup></p>
+  <p style="font-size: 80%; font-style: italic;">* don't ask: it's a
+  Java thing</p>
+</section>
+<section class="slide">
+  <h2>OOP was not a silver bullet</h2>
+  <img src="no-silver-bullet.jpeg">
+</section>
+
+<section class="slide">
+  <h2>How to write reusable code?</h2>
+  <ul>
+    <li>it's not free
+    <li>it's not magic
+    <li>requires some forethought
+    <li>requires much attention to detail
+  </ul>
+  <p></p>
+</section>
+
+<section class="slide">
+  <h2>If I can do it, you can do it</h2>
+  <ul>
+    <li>I've been programming for 30 years
+    <li>some bad code
+    <li>some good code
+    <li>a lot of so-so code
+    <li>learn from my fail!
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>Caveat: is reusability important?</h2>
+  <ul>
+    <li>not always!
+    <li>nothing wrong with code that does one thing for one application
+    <li>don't fall into the trap of thinking that <em>everything</em>
+      must be a potential library
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>Principles of Reusable Code</h2>
+  <ol>
+    <li>be a better programmer
+    <li>fewer classes, more functions
+    <li>functions ≠ procedures (aka, beware side effects)
+    <li>fewer frameworks, more libraries
+    <li>don't go overboard
+    <li>don't solve everything
+    <li>test, test, test
+    <li>document, document, document
+    <li>extensibility ≠ reusability
+  </ol>
+</section>
+<section class="slide">
+  <h2>1. Be a better programmer</h2>
+  <ul>
+    <li>read more code
+    <li>write more code and <em>make it better</em>
+    <li>read more books
+    <li>do not learn to program from Google
+  </ul>
+  <img class="grid" src="tpop.jpg">
+  <img class="grid" src="pragmatic-programmer.jpg">
+  <img class="grid" src="beautiful-code.gif">
+  <p></p>
+</section>
+
+<section class="slide">
+  <h2>2. Fewer classes, more functions</h2>
+  <ul>
+    <li><em>not</em> an anti-OOP rant: I write lots of classes
+      (probably too many!)
+    <li>but don't write a class when a function will do
+    <li>a collection of related functions with shared state: that's a
+        class! make it one!
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>Anti-pattern #1</h2>
+  <p>Code smells:</p>
+  <ul>
+    <li>a class with a single public method
+    <li><em>especially</em> a class with only a single method, period
+  </ul>
+  <pre>
+class ThingLoader:
+    def __init__(self, host, id):
+        self.host = host
+        self.id = id
+
+    def load(self):
+        # connect to self.host
+        # load thing identified by self.id
+</pre>
+</section>
+
+<section class="slide">
+  <h2>A better way</h2>
+  <pre>
+def load_thing(host, id):
+    # connect to host
+    # load thing identified by id
+</pre>
+  <p>Tip o' the hat to Jack Diederich:</p>
+  <ul>
+    <li>https://www.google.com/search?q=stop+writing+classes+pycon
+    <li>https://www.youtube.com/watch?v=o9pEzgHorH0
+  </ul>
+</p>
+</section>
+
+<section class="slide">
+  <h2>Anti-pattern #2</h2>
+  <!--
+  <p>Code smells:</p>
+  <ul>
+    <li>functions operating on the same data
+    <li>overlapping function arguments
+  </ul>
+  -->
+  <pre>
+def is_draft(conn, article_id):
+    '''return true if the specified article is unpublished'''
+
+def is_published(conn, article_id):
+    '''return true if the specified article is published'''
+
+def load_article(conn, article_id):
+    '''load article from database over conn, returning body'''
+
+def save_article(conn, article_id, body):
+    '''write article to database over conn'''
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>A better way</h2>
+  <pre>
+class ArticleStore(object)
+    def __init__(self, conn):
+        self.conn = conn
+
+    def is_draft(self, article_id):
+        '''return true if the specified article is unpublished'''
+
+    def is_published(self, article_id):
+        '''return true if the specified article is published'''
+
+    def load_article(self, article_id):
+        '''load article from database, returning body'''
+
+    def save_article(self, article_id, body):
+        '''write article to database'''
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>3. Functions ≠ procedures</h2>
+  <ul>
+    <li>Pascal's best idea: functions compute stuff, procedures do stuff
+    <li>mainstream imperative languages (C, Java, Python, ...) don't care
+    <li><em>you</em> should care
+    <li>rule of thumb: every function should <em>either</em> return a
+        value <em>or</em> have a side effect: never both!
+    <li>or, learn Haskell!
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>Anti-pattern #3</h2>
+  <pre>
+/**
+ * Replace all 'e' characters in str with 'E'. Return the number of
+ * characters replaced.
+ */
+int strmunge(string str) {
+    ...
+}
+</pre>
+  <ul>
+    <li>C programmers are notorious for this sort of thing
+    <li>but then, you only program in C if you are obsessed with
+      performance
+    <li>and performance is one reason to violate this rule
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>It's not just C programmers</h2>
+  <pre>
+def get_foo(self, foo=None):
+    '''Query the server for foo values.
+    Return a dict mapping hostname to foo value.
+
+    foo must be a dict or None; if supplied, the
+    foo values will additionally be stored there
+    by hostname, and foo will be returned instead
+    of a new dict.
+    '''
+</pre>
+(spotted in a real-life code review, Apr 2015)
+</section>
+
+<section class="slide">
+  <h2>A better way</h2>
+  <pre>
+/**
+ * Return newstr, a copy of str with all 'e' characters replaced
+ * by 'E', and nreplaced, the number of characters replaced.
+ */
+(string, int) strmunge (string str) {
+    ...
+}
+  </pre>
+  <p><em>(assume a language with multiple return values)</em></p>
+  <pre>
+def get_foo(self):
+    '''Query the server for foo values.
+    Return a dict mapping hostname to foo value.
+    '''
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>4. Fewer frameworks, more libraries</h2>
+  <ul>
+    <li>library: code that you call (you are in control)
+    <li>framework: code that calls you (framework is in control)
+    <li>you can't pick and choose which bits of a framework you want
+    <li>it's typically all-or-nothing
+    <li>this hampers reuse!
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>5. Don't go overboard</h2>
+  <ul>
+    <li>OOP is a useful trick to have in the toolbox
+    <li>thus, classes are not evil
+    <li>a computer is just a big box of numbers (with some wires going
+      in and some wires going out)
+    <li>side effects are unavoidable: they are not evil
+    <li>certain problem domains call out for constraint
+    <li>frameworks are not evil
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>6. Don't solve everything</h2>
+  <ul>
+    <li>avoid the temptation to handle every case: you <em>will</em>
+      miss something
+    <li>who can supply the functionality you left out? programmers,
+      the very people who use your library
+    <li>who can remove that bit of ill-advised code you put in that's
+      ruining my day? NOBODY
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>7. Test, test, test</h2>
+  <ul>
+    <li>automated tests are <em>necessary</em> but not <em>sufficient</em>
+    <li>untested code is useless
+    <li>tested code <em>might</em> be useful
+    <li>no controversy here: you must write tests
+  </ul>
+  <p></p>
+</section>
+
+<section class="slide">
+  <h2>8. Document, document, document</h2>
+  <ul>
+    <li>documentation is <em>necessary</em> but not <em>sufficient</em>
+    <li>undocumented code is useless
+    <li>documented code <em>might</em> be useful
+    <li>inline reference docs (docstrings, javadoc, etc.) is the bare
+      minimum
+  </ul>
+  <p></p>
+</section>
+
+<section class="slide">
+  <h2>9. Extensibility ≠ reusability</h2>
+  <ul>
+    <li>another part of the early 90s snake-oil promise: extensible,
+        reusable software components
+    <li>just because you type "class Foo" does not make your code
+        reusable or extensible
+    <li>these are largely independent properties of software
+    <li>if <em>you</em> know how to write extensible code, give a talk!
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>Conclusion</h2>
+  <ul>
+    <li>there ain't no such thing as a free lunch
+    <li>good stuff requires effort
+    <li>that includes reusable and/or extensible code
+    <li>beware of pompous windbags, clueless pontificators, and other
+      purveyors of snake oil
+  </ul>
+  <p></p>
+</section>
+
+<section class="slide">
+  <h2>References &amp; links</h2>
+  <ul>
+    <li><a href="http://www.google.ca/search?q=brooks+no+silver+bullet">Fred Brooks, No Silver Bullet</a><br>
+    <li><a href="http://cm.bell-labs.com/cm/cs/tpop/">Brian Kernighan and Rob Pike, The Practice of Programming</a>
+    <li><a href="http://pragprog.com/the-pragmatic-programmer">Andrew Hunt and David Thomas, The Pragmatic Programmer</a>
+    <li><a href="http://shop.oreilly.com/product/9780596510046.do">Andy Oram and Greg Wilson, ed., Beautiful Code</a>
+    <li><a href="https://www.youtube.com/watch?v=o9pEzgHorH0">Jack Diederich, Stop Writing Classes</a>
+  </ul>
+</section>
+
+<!--
+<section class="slide">
+  <h2></h2>
+  <p></p>
+  <ul>
+    <li>
+    <li>
+  </ul>
+  <p></p>
+</section>
+<section class="slide">
+  <h2></h2>
+  <p></p>
+  <ul>
+    <li>
+    <li>
+  </ul>
+  <p></p>
+</section>
+-->
+
+
+
+<!-- End slides. -->
+
+
+<!-- Begin extension snippets. Add or remove as needed. -->
+
+<!-- deck.navigation snippet -->
+<a href="#" class="deck-prev-link" title="Previous">&#8592;</a>
+<a href="#" class="deck-next-link" title="Next">&#8594;</a>
+
+<!-- deck.status snippet -->
+<p class="deck-status">
+	<span class="deck-status-current"></span>
+	/
+	<span class="deck-status-total"></span>
+</p>
+
+<!-- deck.goto snippet -->
+<form action="." method="get" class="goto-form">
+	<label for="goto-slide">Go to slide:</label>
+	<input type="text" name="slidenum" id="goto-slide" list="goto-datalist">
+	<datalist id="goto-datalist"></datalist>
+	<input type="submit" value="Go">
+</form>
+
+<!-- deck.hash snippet -->
+<a href="." title="Permalink to this slide" class="deck-permalink">#</a>
+
+<!-- End extension snippets. -->
+
+
+<!-- Required JS files. -->
+<script src="deck.js/jquery-1.7.2.min.js"></script>
+<script src="deck.js/core/deck.core.js"></script>
+
+<!-- Extension JS files. Add or remove as needed. -->
+<script src="deck.js/core/deck.core.js"></script>
+<script src="deck.js/extensions/hash/deck.hash.js"></script>
+<script src="deck.js/extensions/menu/deck.menu.js"></script>
+<script src="deck.js/extensions/goto/deck.goto.js"></script>
+<script src="deck.js/extensions/status/deck.status.js"></script>
+<script src="deck.js/extensions/navigation/deck.navigation.js"></script>
+<script src="deck.js/extensions/scale/deck.scale.js"></script>
+
+<!-- Initialize the deck. You can put this in an external file if desired. -->
+<script>
+	$(function() {
+		$.deck('.slide');
+	});
+</script>
+</body>
+</html>

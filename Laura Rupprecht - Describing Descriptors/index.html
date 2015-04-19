@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Describing Descriptors</title>
+
+		<meta name="description" content="How to use Python descriptors">
+		<meta name="author" content="Laura Rupprecht">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="static/css/reveal.css">
+		<link rel="stylesheet" href="static/css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="static/lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : static/css/print/paper.css;
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="./lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+<div class="reveal">
+
+<!-- Any section element inside of this container is displayed as a slide -->
+<div class="slides">
+<section>
+    <h1>Describing Descriptors</h1>
+    <h2>Pycon 2015, Montréal, Canada</h2>
+    <h3>9 Apr 2015</h3>
+    <h3>Laura Rupprecht</h3>
+    <p>
+        <small><a href="http://twitter.com/LCRcircuit">@LCRcircuit</a></small>
+    </p>
+</section>
+
+<section>
+	<h2>About me:</h2>
+	<ul>
+		<li>Laura Rupprecht</li>
+		<li>Engineer at <a href="http://www.zefr.com">ZEFR</a> in Los Angeles, working on AdTech</li>
+		<li><a href="http://twitter.com/LCRcircuit">@LCRcircuit</a></li>
+		<li><a href="http://www.laurarupprecht.com">laurarupprecht.com</a></li>
+	</ul>
+</section>
+
+<section>
+	<h2>Outline:</h2>
+	<ul>
+		<li>What is a descriptor?</li>
+		<li>Custom Descriptor Example</li>
+		<li>Kinds of descriptors</li>
+		<li>Attribute lookup order</li>
+		<li><code>@property</code> / <code>@classmethod</code></li>
+		<li>Usage in ORMs</li>
+		<li>Common Problems</li>
+	</ul>
+</section>
+
+<section>
+	<section>
+	<h2>What is a descriptor?</h2>
+	
+	<div class="fragment">
+	<p>A certain type of attribute</p>
+		<pre><code>class Foo():
+    x = SomeDescriptor(some_args)  # x is the attribute</code></pre>
+	</div>
+	
+	<div class="fragment">
+	<p><code>SomeDescriptor</code>, the thing you're using instead of a normal attribute, might define:
+	<ul>
+		<li><code>__get__</code></li>
+		<li><code>__set__</code></li>
+		<li><code>__delete__</code></li>
+	</ul>
+	</p>
+	</div>
+	</section>
+	
+    <section>
+    <h2>Descriptor Definition</h2>
+<pre><code>class Descriptor():
+    def __init__(self, *args, **kwargs):
+        # do something
+
+    def __get__(self, instance, owner):
+        # do something
+        return value
+
+    def __set__(self, instance, value):
+        # do something
+        return None
+
+    def __delete__(self, instance):
+        # do something
+        return None</code></pre>
+    </section>
+</section>
+
+<section>
+	<section>
+	<h2>Example:</h2>
+		<ul>
+			<li class="fragment">Dealing with json YouTube API responses</li>
+			<li class="fragment">Dictionary access is <i>everywhere</i>
+				<p class="fragment"><code>video['snippet']['thumbnails']['maxres']['url']</code></p>
+			</li>
+			<li class="fragment">Hat tip to Jonathan <a href="http://twitter.com/tushman">@tushman</a> - "Use Descriptors"</li>
+		</ul>
+	</section>
+	
+	<section>
+	uh... <div class="fragment"> what's a descriptor?</div>
+	</section>
+</section>
+
+
+<section>
+    <h2>What is the definition of a descriptor?</h2>
+    <p class="fragment">
+        Official Version: An object attribute that has some sort of “binding behavior.”
+    </p>
+    <p class="fragment">
+        Has any combination of the following methods:
+			<ul>
+				<li class="fragment"><code>__get__</code></li>
+				<li class="fragment"><code>__set__</code></li>
+				<li class="fragment"><code>__delete__</code></li>
+			</ul>
+    </p>
+</section>
+
+<!-- Example Descriptor -->
+<section>
+<section>
+<h2>Example: Making API Use Easier</h2>
+<pre><code>response = YouTubeApi.get_video_info(video_id='dQw4w9WgXcQ')
+
+{u'etag': u'"9iWEWaGPvvCMMVNTPHF9GiusHJA/5Y8U-tVLJ2KpbH3djNvGCA7vmLs"',
+  u'id': u'dQw4w9WgXcQ',
+  u'kind': u'youtube#video',
+  u'snippet': {u'categoryId': u'10',
+   u'channelId': u'UC38IQsAvIsxxjztdMZQtwHA',
+   u'channelTitle': u'channelTitle',
+   u'description': u'A description',
+   u'liveBroadcastContent': u'none',
+   u'localized': {u'description': u'A description',
+    u'title': u'Title'},
+   u'publishedAt': u'2009-10-25T06:45:58.000Z',
+   u'thumbnails': {u'default': {u'height': 90,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg',
+     u'width': 120},
+    u'high': {u'height': 360,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+     u'width': 480},
+    u'maxres': {u'height': 720,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+     u'width': 1280},
+    u'medium': {u'height': 180,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+     u'width': 320},
+    u'standard': {u'height': 480,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/sddefault.jpg',
+     u'width': 640}},
+   u'title': u'Title'},
+  u'statistics': {u'commentCount': u'240857',
+   u'dislikeCount': u'32927',
+   u'favoriteCount': u'0',
+   u'likeCount': u'548877',
+   u'viewCount': u'111604659'}}
+</code></pre>
+
+<!--aside>{u'etag': u'"9iWEWaGPvvCMMVNTPHF9GiusHJA/5Y8U-tVLJ2KpbH3djNvGCA7vmLs"',
+  u'id': u'dQw4w9WgXcQ',
+  u'kind': u'youtube#video',
+  u'snippet': {u'categoryId': u'10',
+   u'channelId': u'UC38IQsAvIsxxjztdMZQtwHA',
+   u'channelTitle': u'RickAstleyVEVO',
+   u'description': u'Music video by Rick Astley performing Never Gonna Give You Up. YouTube view counts pre-VEVO: 2,573,462 (C) 1987 PWL',
+   u'liveBroadcastContent': u'none',
+   u'localized': {u'description': u'Music video by Rick Astley performing Never Gonna Give You Up. YouTube view counts pre-VEVO: 2,573,462 (C) 1987 PWL',
+    u'title': u'Rick Astley - Never Gonna Give You Up'},
+   u'publishedAt': u'2009-10-25T06:45:58.000Z',
+   u'thumbnails': {u'default': {u'height': 90,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg',
+     u'width': 120},
+    u'high': {u'height': 360,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+     u'width': 480},
+    u'maxres': {u'height': 720,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+     u'width': 1280},
+    u'medium': {u'height': 180,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+     u'width': 320},
+    u'standard': {u'height': 480,
+     u'url': u'https://i.ytimg.com/vi/dQw4w9WgXcQ/sddefault.jpg',
+     u'width': 640}},
+   u'title': u'Rick Astley - Never Gonna Give You Up'},
+  u'statistics': {u'commentCount': u'240857',
+   u'dislikeCount': u'32927',
+   u'favoriteCount': u'0',
+   u'likeCount': u'548877',
+   u'viewCount': u'111604659'}}
+</aside -->
+</section>
+
+<section>
+<h2>How can we make this prettier?</h2>
+<pre><code>response = YouTubeApi.get_video_info(video_id)
+
+youtube_id = response['id']
+title = response['snippet']['title']
+views = response['statistics']['viewCount']
+description = response['snippet']['description']</code></pre>
+</section>
+
+<section>
+<h2>1st Try: put into an object</h2>
+<pre><code>class YouTubeResponse():
+    def __init__(self, response):
+        self.youtube_id = response['id']
+        self.title = response['snippet']['title']
+        self.views = response['statistics']['viewCount']
+        self.description = response['snippet']['description']
+
+result = YouTubeApi.get_video_info(video_id)
+response = YouTubeResponse(result)
+print(response.youtube_id)
+# dQw4w9WgXcQ</code></pre>
+</section>
+
+<section>
+a little better...
+</section>
+
+<section>
+<h2>Let's focus on the response</h2>
+<pre><code>import dict_digger
+
+def get_response(json_response, *path):
+    return dict_digger.dig(json_response, *path)
+		
+
+class YouTubeResponse():
+    def __init__(self, json_response):
+    	self.json_response = json_response
+    	
+        self.youtube_id = get_response(json_response, 'id')
+        self.title = get_response(json_response, 'snippet', 'title')
+        self.views = get_response(json_response, 'statistics', 'viewCount')
+        self.description = get_response(json_response, 'snippet', 'description')</code></pre>
+</section>
+
+<section>
+closer... but still repetitive
+</section>
+
+<section>
+<h2>Let's focus on the response</h2>
+<pre><code>import dict_digger
+
+class ResponseDescriptor():
+    def __init__(self, *path):
+        self.path = path
+
+    def __get__(self, instance, objtype):
+        return dict_digger.dig(instance.json_response, *self.path)
+		
+
+class YouTubeResponse():
+    def __init__(self, json_response):
+    	self.json_response = json_response
+    	
+    youtube_id = ResponseDescriptor('id')
+    title = ResponseDescriptor('snippet', 'title')
+    views = ResponseDescriptor('statistics', 'viewCount')
+    description = ResponseDescriptor('snippet', 'description')</code></pre>
+</section>
+
+<section>
+<h2 css="white-space: nowrap">For completeness, add error checking</h2>
+<pre><code>import dict_digger
+class ResponseDescriptor():
+    def __init__(self, *path):
+        self.path = path
+
+    def __get__(self, instance, objtype):
+        try:
+            return dict_digger.dig(instance.json_response, *self.path, fail=True)
+        except (IndexError, KeyError):
+            raise AttributeError("Item not present in instance attribute"
+                                 "'json_response'")
+
+class YouTubeResponse():
+    def __init__(self, json_response):
+    	self.json_response = json_response
+    	
+    youtube_id = ResponseDescriptor('id')
+    title = ResponseDescriptor('snippet', 'title')
+    views = ResponseDescriptor('statistics', 'viewCount')
+    description = ResponseDescriptor('snippet', 'description')</code></pre>
+    <aside class="notes">
+            Here we do a couple of things: we explicitly tell the dict digger to fail if it runs into a KeyError or IndexError while going through each item in the response.
+            Then we raise an AttributeError with a description that is more appropriate for the way we are using this descriptor.
+            I'm a huge fan of using custom exceptions.
+    </aside>
+</section>
+
+<section>
+<h2>Now things are easier</h2>
+<pre><code>result = YouTubeApi.get_video_info('dQw4w9WgXcQ')
+response = YouTubeResponse(result)
+</code></pre>
+</section>
+
+<section data-background="https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg">
+<pre><code>result = YouTubeApi.get_video_info('dQw4w9WgXcQ')
+response = YouTubeResponse(result)
+print(response.title)
+# Rick Astley - Never Gonna Give You Up
+</code></pre>
+</section>
+
+</section>
+<!-- end of example -->
+
+<section>
+	<h2>Two types of descriptors</h2>
+		<ol>
+			<li class="fragment">Data Descriptor:
+					<ul>
+						<li><code>__get__</code></li>
+						<li><code>__set__</code> / <code>__delete__</code></li>
+					</ul>
+			</li>
+			<li class="fragment">Non-Data Descriptor:
+					<ul>
+						<li><code>__get__</code></li>
+					</ul>
+			</li>
+		</ol>
+</section>
+
+
+
+<section>
+	<div>What does that mean for when I look up an attribute?</div>
+</section>
+
+<!-- attribute lookup -->
+<section>
+<section>
+	<h2>Take a step back<h2>
+	<p><h3>Looking for <code>foo.x</code>:</h3></p>
+	<ol>
+		<li>Python is all dictionaries, right? So look up the item in the object dictionary: <code>foo.__dict__['x']</code></li>
+	</ol>
+</section>
+
+
+<section>
+	<div>Well, that's <i>almost</i> how it works...</div>
+</section>
+
+<section>
+	<h3>Looking for <code>foo.x</code></h3>
+	<table>
+		<thead>
+			<tr>
+				 <th>Step</th>
+				 <th>Example</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr class="fragment">
+				<td>1. Check class dict for <i>data descriptor</i></td>
+				<td><code>type(foo).__dict__['x']</code></td>
+			</tr>
+			<tr class="fragment">
+				<td>2. Check instance dict</td>
+				<td><code>foo.__dict__['x']</code></td>
+			</tr>
+			<tr class="fragment">
+				<td>3. Check class dict for <i>non-data descriptor</i> or attribute</td>
+				<td><code>type(foo).__dict__['x']</code></td>
+			</tr>
+			<tr class="fragment">
+				<td>4. Not found</td>
+				<td><code>AttributeError</code></td>
+			</tr><tr></tr>
+		</tbody>
+	</table>
+	<div class="fragment">* Look through MRO (Method Resolution Order) if nothing found in <code>type(foo)</code></div>
+</section>
+
+<section>
+	<h2>Data/Non-Data Descriptors</h2>
+	Effect of combining function and attribute call mechanics
+	<ol>
+		<li class="fragment">Call <code>instance.f(x)</code></li>
+		<li class="fragment">Check <code>type(instance).__dict__['f']</code> for data descriptor</li>
+		<li class="fragment">Check <code>instance.__dict__['f']</code> for object</li>
+		<li class="fragment">Find non-data descriptor in <code>type(instance).__dict__['f']</code></li>
+		<li class="fragment">Call <code>f_descriptor.__get__(instance, owner)</code></li>
+		<li class="fragment">Call <code>f(instance, x)</code></li>
+	</ol>
+</section>
+
+<section>
+	<h3>Looking for <code>foo.x</code></h3>
+	<table>
+		<thead><tr>
+			 <th>Step</th>
+			 <th>Example</th>
+		</tr></thead>
+		<tbody>
+			<tr>
+				<td>1. Check class dict for <i>data descriptor</i></td>
+				<td><code>type(foo).__dict__['x']</code></td>
+			</tr>
+			<tr>
+				<td>2. Check instance dict</td>
+				<td><code>foo.__dict__['x']</code></td>
+			</tr>
+			<tr class="fragment highlight-strawberry">
+				<td>3. Check class dict for <i>non-data descriptor</i> or attribute</td>
+				<td><code>type(foo).__dict__['x']</code></td>
+			</tr>
+			<tr>
+				<td>4. Not found</td>
+				<td><code>AttributeError</code></td>
+			</tr><tr></tr>
+		</tbody>
+	</table>
+	<div>* Look through MRO (Method Resolution Order) if nothing found in <code>type(foo)</code></div>
+</section>
+
+</section>
+
+<section>
+	<h2>Outline:</h2>
+	<ul>
+		<li>What is a descriptor?</li>
+		<li>Custom Descriptor Example</li>
+		<li>Kinds of descriptors</li>
+		<li>Attribute lookup order</li>
+		<li style="color: #FF314E;"><code>@property</code> / <code>@classmethod</code></li>
+		<li>Usage in ORMs</li>
+		<li>Common Problems</li>
+	</ul>
+</section>
+
+
+</section>
+
+    <!-- @property -->
+<section>
+    <section>
+    <h2><code>@property</code></h2>
+    A <code>@property</code> transforms your code from this:
+    <pre><code>class Foo(object):
+    def __init__(self):
+        self.the_answer = 42
+
+    @property
+    def bar(self):
+        return self.the_answer
+</code></pre>
+    <div class="fragment">
+    to this:
+    <pre><code>class Foo(object):
+    def _bar(self):
+    	return self.the_answer
+    
+    bar = property(fget=_bar, fset=None, fdel=None, doc=None)
+</code></pre>
+    </div>
+    </section>
+
+    <section>
+    <h2><code>@property</code></h2>
+    which is used like this:
+    <pre><code>foo = Foo()
+print(foo.bar)
+# 42
+foo.bar = 24
+# AttributeError: can't set attribute
+</code></pre>
+	<p class="fragment">Remember, <code>property</code> is <i>always</i> a data descriptor!</p>
+	</section>
+
+</section>
+
+    <!-- @classmethod -->
+<section>
+	<section>
+    <h2><code>@classmethod</code></h2>
+    A <code>@classmethod</code> transforms your code from this:
+    <pre><code>class Foo(object):
+
+    @classmethod
+    def bar(cls):
+        return 42
+</code></pre>
+
+    <div class="fragment">
+    to this:
+    <pre><code>class Foo(object):
+    def _bar(cls):
+        return 42
+
+    bar = classmethod(_bar)
+</code></pre>
+    </div>
+	</section>
+
+    <section>
+    <h2><code>@classmethod</code></h2>
+    which can be used like this:
+    <pre><code>foo = Foo()
+print(foo.bar)
+# 42
+</code></pre>
+    <div class="fragment">
+        but <i>also</i> like this:
+    <pre><code>print(Foo.bar)
+# 42
+</code></pre>
+    </div>
+	<p class="fragment">Note that <code>classmethod</code> is a <i>non-data descriptor!</i></p>
+    </section>
+</section>
+
+<section>
+    <section>
+
+    <h2>ORMs in Python</h2>
+        Object Relational Mapper
+    <pre><code>from django.db import models
+
+class Person(models.Model):
+    name = models.CharField(max_length=255, blank=True)
+    birthday = models.DateField()
+</code></pre>
+    </section>
+
+
+    <section>
+
+    <h2><code>ORMs in Python</code></h2>
+        <h3>Example:</h3>
+    <pre><code>import datetime
+p = Person(name='Laura', birthday=datetime.datetime.now())
+p.save()
+
+p.name
+# 'Laura'
+</code></pre>
+    </section>
+	
+	<section>
+    <h2><code>ORMs in Python</code></h2>
+        <h4>And then the magic part happens:</h4>
+    <pre><code>p.name = 'Super crazy long name definitely more than 255 chars...'
+p.save()
+# ValidationError
+</code></pre>
+    </section>
+</section>
+
+<!-- Make your own descriptors -->
+<section>
+<h3>Making Custom Descriptors<h3>
+<div>
+	<h3>Why?</h3>
+	<ul>
+		<li>To check that data has the proper format</li>
+		<li>To automatically perform verification of a field</li>
+		<li>To make it easier to manipulate existing data fields</li>
+	<ul>
+</div>
+<div class="fragment">
+<h3>Why not?</h3>
+	<ul>
+		<li>Because it looks awesome</li>
+		<li>Job security</li>
+	<ul>
+</div>
+</section>
+
+
+
+<section>
+<h2>Other common exceptions to think about</h2>
+<ul>
+	<li><code>ValueError</code></li>
+	<li><code>ValidationError</code></li>
+	<li><code>AttributeError</code></li>
+	<li><code>NotImplementedError</code></li>
+</ul>
+</section>
+
+<section>
+
+
+<section>
+<h2>Other common pitfalls</h2>
+<h3>Confusing class and instance variables</h3>
+<pre><code>class BadDescriptor():
+    def __init__(self):
+        self.value = None
+
+    def __get__(self, instance, objtype):
+        return self.value
+
+    def __set__(self, value):
+        self.value = value</code></pre>
+
+
+<pre class="fragment"><code>thing_one = Foo()
+thing_one.x = 'hello world'
+print(thing_one.x)
+# 'hello world'
+
+thing_two = Foo()
+print(thing_two.x)
+# 'hello world'</code></pre>
+</section>
+
+<section>
+<h3>Infinite Recursion: Problem</h3>
+<pre><code>class InfinitelyBadDescriptor():
+
+    def __init__(self, name):
+        self.name = name
+
+    def __get__(self, instance, owner):
+        return getattr(instance, self.name)</code></pre>
+<div class="fragment">
+<code>getattr(instance, self.name)</code>
+<p>calls</p> <code>__get__(self, instance, owner)</code>
+</div>
+</section>
+
+<section>
+<h3>Infinite Recursion: Solution</h3>
+<pre><code>class InfinitelyAwesomeDescriptor():
+
+    def __init__(self, name, default):
+        self.name = name
+        self.default = default
+
+    def __get__(self, instance, owner):
+        try:
+            return instance.__dict__[self.name]
+        except KeyError:
+            return self.default
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.name] = value</code></pre>
+
+<ol>
+	<li class="fragment">Uses <code>instance.__dict__[self.name]</code></li>
+	<li class="fragment"><code>__set__(self, instance, value)</code> is <i>optional</i></li>
+</ol>
+
+</section>
+
+
+</section>
+
+<section>
+<h2>Other Resources</h2>
+<ul>
+	<li><a href="https://www.youtube.com/watch?v=9A1ycvcgc_U">Demystifying Descriptors in 5 Minutes</a>, talk by Chris Beaumont,
+	with accompanying <a href="http://nbviewer.ipython.org/gist/ChrisBeaumont/5758381/descriptor_writeup.ipynb">IPython notebook</a></li>
+	<li><a href="https://www.youtube.com/watch?v=sPiWg5jSoZI">Python 3 Metaprogramming</a>, PyCon 2013 Tutorial by David Beazley</li>
+	<li><a href="https://www.youtube.com/watch?v=ZdvpNaWwx24">Python Descriptors</a>, a talk by Simeon Franklin</li>
+	<li>Raymond Hettinger's <a href="https://docs.python.org/3.4/howto/descriptor.html">Descriptor HowTo Guide</a></li>
+	<li>Guido van Rossum's <a href="http://python-history.blogspot.com/2010/06/inside-story-on-new-style-classes.html">The Inside Story on New-Style Classes</a></li>
+</ul>
+</section>
+
+<section>
+<h2>Thanks</h2>
+<div>
+Slides at <a href="http://bit.ly/py-descriptors">bit.ly/py-descriptors</a>
+</div>
+<div>
+	<a href="http://twitter.com/LCRcircuit">@LCRcircuit</a>
+</div>
+</section>
+
+			</div>
+
+		</div>
+
+		<script src="static/lib/js/head.min.js"></script>
+		<script src="static/js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: "static/lib/js/classList.js", condition: function() { return !document.body.classList; } },
+					{ src: "static/plugin/markdown/marked.js", condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: "static/plugin/markdown/markdown.js", condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: "static/plugin/highlight/highlight.js", async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: "static/plugin/zoom-js/zoom.js", async: true },
+					{ src: "static/plugin/notes/notes.js", async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

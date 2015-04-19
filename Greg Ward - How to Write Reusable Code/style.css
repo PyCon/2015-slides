@@ -1,0 +1,38 @@
+.csstransforms .slide h1 {
+    font-size: 400%;
+    position: static;
+    transform: none;
+    padding: 0px;
+    margin-top: 3ex;
+}
+.deck-container pre {
+    padding: 0.5ex 0.5em 0.5ex 0.5em;
+    font-size: 0.8em;
+}
+.deck-container .deck-status {
+    top: 5px;
+    right: 10px;
+}
+.slide img.grid {
+    display: inline;
+    padding: 0px 50px 0px 50px;
+}
+.slide .big {
+    font-size: big;
+    font-weight: bold;
+    font-style: italic;
+}
+
+.deck-container .slide a, .deck-container .slide a:hover, .deck-container .slide a:focus, .deck-container .slide a:active, .deck-container .slide a:visited {
+    color: #55c;
+}
+
+div.footer {
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    text-align: center;
+    background: #f0f0f0;
+    font-size: smaller;
+}
